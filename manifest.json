@@ -5,6 +5,6 @@
   "minAppVersion": "1.4.0",
   "description": "Global chronological timeline of your entire vault — automatically indexes all notes by date, supports filtering by tags/folders, zoom, and interactive navigation.",
   "author": "Vault Timeline",
-  "authorUrl": "https://github.com/vault-timeline",
+  "authorUrl": "https://github.com/Veltrix42/vault-timeline",
   "isDesktopOnly": false
 }
