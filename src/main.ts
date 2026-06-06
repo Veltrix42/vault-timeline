@@ -1,9 +1,7 @@
 import {
 	App,
 	ItemView,
-	MarkdownView,
 	Menu,
-	Modal,
 	Notice,
 	Plugin,
 	PluginSettingTab,
@@ -80,7 +78,7 @@ const VIEW_TYPE_TIMELINE = "vault-timeline-view";
 
 const DATE_PATTERNS: RegExp[] = [
 	/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2})?)?/,
-	/^\d{2}[.\/]\d{2}[.\/]\d{4}/,
+	/^\d{2}[./]\d{2}[./]\d{4}/,
 	/^\d{4}\/\d{2}\/\d{2}/,
 ];
 
@@ -580,7 +578,7 @@ export class TimelineView extends ItemView {
 	private showTooltip(e: MouseEvent, event: TimelineEvent, color: string) {
 		this.hideTooltip();
 
-		const tip = document.createElement("div");
+		const tip = (window.activeDocument ?? document).createElement("div");
 		tip.className = "vt-tooltip";
 		tip.style.setProperty("--tip-color", color);
 
@@ -702,7 +700,7 @@ class VaultTimelineSettingTab extends PluginSettingTab {
 	display(): void {
 		const { containerEl } = this;
 		containerEl.empty();
-		containerEl.createEl("h2", { text: "Vault Timeline Settings" });
+		new Setting(containerEl).setName("Vault Timeline Settings").setHeading();
 
 		// Date field
 		new Setting(containerEl)
@@ -889,14 +887,14 @@ export default class VaultTimelinePlugin extends Plugin {
 
 		// Commands
 		this.addCommand({
-			id: "open-vault-timeline",
-			name: "Open Vault Timeline",
+			id: "open-timeline",
+			name: "Open",
 			callback: () => this.activateView(),
 		});
 
 		this.addCommand({
-			id: "reindex-vault-timeline",
-			name: "Re-index Vault Timeline",
+			id: "reindex",
+			name: "Re-index",
 			callback: async () => {
 				await this.reindex();
 				new Notice("Vault Timeline re-indexed.");
@@ -910,14 +908,14 @@ export default class VaultTimelinePlugin extends Plugin {
 		this.addSettingTab(new VaultTimelineSettingTab(this.app, this));
 
 		// Initial index after layout ready
-		this.app.workspace.onLayoutReady(async () => {
-			await this.reindex();
-			this.registerVaultEvents();
+		this.app.workspace.onLayoutReady(() => {
+			void this.reindex().then(() => this.registerVaultEvents());
 		});
 	}
 
 	onunload() {
-		this.app.workspace.detachLeavesOfType(VIEW_TYPE_TIMELINE);
+		// Do not detach leaves — Obsidian will handle leaf cleanup.
+		// Detaching resets leaf position even if user moved the panel.
 	}
 
 	private registerVaultEvents() {
@@ -953,11 +951,11 @@ export default class VaultTimelinePlugin extends Plugin {
 		let leaf = workspace.getLeavesOfType(VIEW_TYPE_TIMELINE)[0];
 
 		if (!leaf) {
-			leaf = workspace.getRightLeaf(false) ?? workspace.getLeaf(true);
+			leaf = workspace.getLeaf("split");
 			await leaf.setViewState({ type: VIEW_TYPE_TIMELINE, active: true });
 		}
 
-		workspace.revealLeaf(leaf);
+		void workspace.revealLeaf(leaf);
 	}
 
 	async loadSettings() {
