@@ -709,7 +709,6 @@ class VaultTimelineSettingTab extends PluginSettingTab {
 	private renderSettings(): void {
 		const { containerEl } = this;
 		containerEl.empty();
-		new Setting(containerEl).setName("General").setHeading();
 
 		// Date field
 		new Setting(containerEl)
