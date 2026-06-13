@@ -79,7 +79,7 @@ const VIEW_TYPE_TIMELINE = "vault-timeline-view";
 const DATE_PATTERNS: RegExp[] = [
 	/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2})?)?/,
 	/^\d{2}[./]\d{2}[./]\d{4}/,
-	/^\d{4}\/\d{2}\/\d{2}/,
+	/^\d{4}[/]\d{2}[/]\d{2}/,
 ];
 
 function parseDate(value: unknown): number | null {
@@ -547,7 +547,7 @@ export class TimelineView extends ItemView {
 				item
 					.setTitle("Open note")
 					.setIcon("file-text")
-					.onClick(() => this.openNote(event.id))
+					.onClick(() => { void this.openNote(event.id); })
 			);
 			menu.addItem((item) =>
 				item
@@ -578,7 +578,8 @@ export class TimelineView extends ItemView {
 	private showTooltip(e: MouseEvent, event: TimelineEvent, color: string) {
 		this.hideTooltip();
 
-		const tip = (window.activeDocument ?? window.document).createElement("div");
+		const activeDoc = window.activeDocument ?? window.document;
+		const tip = activeDoc.createElement("div");
 		tip.className = "vt-tooltip";
 		tip.style.setProperty("--tip-color", color);
 
@@ -606,7 +607,7 @@ export class TimelineView extends ItemView {
 
 		tip.createEl("div", { cls: "vt-tip-hint", text: "Click to open · Right-click for menu" });
 
-		(window.activeDocument ?? window.document).body.appendChild(tip);
+		activeDoc.body.appendChild(tip);
 		this.tooltip = tip;
 
 		const rect = (e.target as HTMLElement).getBoundingClientRect();
@@ -639,8 +640,12 @@ export class TimelineView extends ItemView {
 
 		const track = minimap.createDiv({ cls: "vt-minimap-track" });
 
-		const allMin = this.filteredEvents[0].date;
-		const allMax = this.filteredEvents[this.filteredEvents.length - 1].date;
+		const firstEvent = this.filteredEvents[0];
+		const lastEvent = this.filteredEvents[this.filteredEvents.length - 1];
+		if (!firstEvent || !lastEvent) return;
+
+		const allMin = firstEvent.date;
+		const allMax = lastEvent.date;
 		const totalMs = allMax - allMin || 1;
 
 		for (const event of this.filteredEvents) {
@@ -891,9 +896,9 @@ export default class VaultTimelinePlugin extends Plugin {
 
 		// Commands
 		this.addCommand({
-			id: "open-timeline",
+			id: "open",
 			name: "Open",
-			callback: () => this.activateView(),
+			callback: () => { void this.activateView(); },
 		});
 
 		this.addCommand({
@@ -906,7 +911,7 @@ export default class VaultTimelinePlugin extends Plugin {
 		});
 
 		// Ribbon icon
-		this.addRibbonIcon("calendar-clock", "Open Vault Timeline", () => this.activateView());
+		this.addRibbonIcon("calendar-clock", "Open Vault Timeline", () => { void this.activateView(); });
 
 		// Settings tab
 		this.addSettingTab(new VaultTimelineSettingTab(this.app, this));
@@ -918,8 +923,7 @@ export default class VaultTimelinePlugin extends Plugin {
 	}
 
 	onunload() {
-		// Do not detach leaves — Obsidian will handle leaf cleanup.
-		// Detaching resets leaf position even if user moved the panel.
+		// Obsidian handles leaf cleanup automatically.
 	}
 
 	private registerVaultEvents() {
