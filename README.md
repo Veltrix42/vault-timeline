@@ -118,7 +118,7 @@ Requirements: **Node.js 18+**
 
 ```bash
 # Clone into your vault's plugin directory
-git clone https://github.com/your-username/vault-timeline .obsidian/plugins/vault-timeline
+git clone https://github.com/veltrix42/vault-timeline .obsidian/plugins/vault-timeline
 cd .obsidian/plugins/vault-timeline
 
 # Install dependencies
