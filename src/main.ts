@@ -153,7 +153,7 @@ export class VaultIndexer {
 		// Tag filter
 		const fileTags: string[] = [
 			...(metadata?.tags?.map((t) => t.tag.replace(/^#/, "")) ?? []),
-			...(frontmatter.tags ?? []),
+			...(Array.isArray(frontmatter.tags) ? (frontmatter.tags as string[]) : []),
 		];
 		if (
 			settings.filterTags.length > 0 &&
@@ -183,12 +183,12 @@ export class VaultIndexer {
 
 		return {
 			id: file.path,
-			title: frontmatter.title || file.basename,
+			title: (frontmatter.title as string | undefined) || file.basename,
 			date,
 			endDate,
 			tags: fileTags,
 			excerpt,
-			icon: frontmatter.icon,
+			icon: frontmatter.icon as string | undefined,
 			folder,
 		};
 	}
@@ -537,8 +537,8 @@ export class TimelineView extends ItemView {
 		label.addEventListener("mouseenter", showTooltip);
 		label.addEventListener("mouseleave", hideTooltip);
 
-		dot.addEventListener("click", () => this.openNote(event.id));
-		label.addEventListener("click", () => this.openNote(event.id));
+		dot.addEventListener("click", () => { void this.openNote(event.id); });
+		label.addEventListener("click", () => { void this.openNote(event.id); });
 
 		// Context menu
 		dot.addEventListener("contextmenu", (e: MouseEvent) => {
@@ -578,7 +578,7 @@ export class TimelineView extends ItemView {
 	private showTooltip(e: MouseEvent, event: TimelineEvent, color: string) {
 		this.hideTooltip();
 
-		const tip = (window.activeDocument ?? document).createElement("div");
+		const tip = (window.activeDocument ?? window.document).createElement("div");
 		tip.className = "vt-tooltip";
 		tip.style.setProperty("--tip-color", color);
 
@@ -606,7 +606,7 @@ export class TimelineView extends ItemView {
 
 		tip.createEl("div", { cls: "vt-tip-hint", text: "Click to open · Right-click for menu" });
 
-		document.body.appendChild(tip);
+		(window.activeDocument ?? window.document).body.appendChild(tip);
 		this.tooltip = tip;
 
 		const rect = (e.target as HTMLElement).getBoundingClientRect();
@@ -639,8 +639,8 @@ export class TimelineView extends ItemView {
 
 		const track = minimap.createDiv({ cls: "vt-minimap-track" });
 
-		const allMin = this.filteredEvents[0]!.date;
-		const allMax = this.filteredEvents[this.filteredEvents.length - 1]!.date;
+		const allMin = this.filteredEvents[0].date;
+		const allMax = this.filteredEvents[this.filteredEvents.length - 1].date;
 		const totalMs = allMax - allMin || 1;
 
 		for (const event of this.filteredEvents) {
@@ -698,9 +698,13 @@ class VaultTimelineSettingTab extends PluginSettingTab {
 	}
 
 	display(): void {
+		this.renderSettings();
+	}
+
+	private renderSettings(): void {
 		const { containerEl } = this;
 		containerEl.empty();
-		new Setting(containerEl).setName("Vault Timeline Settings").setHeading();
+		new Setting(containerEl).setName("General").setHeading();
 
 		// Date field
 		new Setting(containerEl)
@@ -804,14 +808,14 @@ class VaultTimelineSettingTab extends PluginSettingTab {
 			);
 
 		// Color groups
-		containerEl.createEl("h3", { text: "Color Groups" });
-		containerEl.createEl("p", {
-			cls: "setting-item-description",
-			text: "Assign colors to tags. The first matching tag color is used.",
-		});
+		new Setting(containerEl)
+			.setName("Color groups")
+			.setDesc("Assign colors to tags. The first matching tag color is used.")
+			.setHeading();
 
 		for (let i = 0; i < this.plugin.settings.colorGroups.length; i++) {
-			const group = this.plugin.settings.colorGroups[i]!;
+			const group = this.plugin.settings.colorGroups[i];
+			if (!group) continue;
 			new Setting(containerEl)
 				.setName(`Group ${i + 1}`)
 				.addText((text) =>
@@ -835,7 +839,7 @@ class VaultTimelineSettingTab extends PluginSettingTab {
 					btn.setIcon("trash").onClick(async () => {
 						this.plugin.settings.colorGroups.splice(i, 1);
 						await this.plugin.saveSettings();
-						this.display();
+						this.renderSettings();
 					})
 				);
 		}
@@ -847,12 +851,12 @@ class VaultTimelineSettingTab extends PluginSettingTab {
 				.onClick(async () => {
 					this.plugin.settings.colorGroups.push({ tag: "", color: "#888888" });
 					await this.plugin.saveSettings();
-					this.display();
+					this.renderSettings();
 				})
 		);
 
 		// Re-index button
-		containerEl.createEl("h3", { text: "Actions" });
+		new Setting(containerEl).setName("Actions").setHeading();
 		new Setting(containerEl)
 			.setName("Re-index vault")
 			.setDesc("Force a full re-scan of all notes.")
@@ -942,7 +946,7 @@ export default class VaultTimelinePlugin extends Plugin {
 	private refreshViews() {
 		for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_TIMELINE)) {
 			const view = leaf.view as TimelineView;
-			view.refresh();
+			void view.refresh();
 		}
 	}
 
@@ -955,7 +959,7 @@ export default class VaultTimelinePlugin extends Plugin {
 			await leaf.setViewState({ type: VIEW_TYPE_TIMELINE, active: true });
 		}
 
-		void workspace.revealLeaf(leaf);
+		workspace.setActiveLeaf(leaf, { focus: true });
 	}
 
 	async loadSettings() {
